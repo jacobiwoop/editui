@@ -1,13 +1,14 @@
 {
   "name": "@editui/plugin",
   "version": "0.1.0",
-  "description": "EditUI build plugin — annotates DOM elements with source context",
+  "description": "EditUI build plugin \u2014 annotates DOM elements with source context",
   "main": "src/index.js",
   "exports": {
     ".": "./src/index.js",
-    "./vite": "./src/vite.js",
+    "./vite": "./src/vite.mjs",
     "./webpack": "./src/webpack.js",
-    "./rollup": "./src/rollup.js"
+    "./rollup": "./src/rollup.js",
+    "./babel-plugin": "./src/babel-plugin.js"
   },
   "scripts": {
     "test": "node test/index.js"
