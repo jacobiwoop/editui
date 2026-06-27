@@ -1,0 +1,36 @@
+{
+  "name": "@editui/plugin",
+  "version": "0.1.0",
+  "description": "EditUI build plugin — annotates DOM elements with source context",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./vite": "./src/vite.js",
+    "./webpack": "./src/webpack.js",
+    "./rollup": "./src/rollup.js"
+  },
+  "scripts": {
+    "test": "node test/index.js"
+  },
+  "keywords": [
+    "editui",
+    "vite-plugin",
+    "babel-plugin",
+    "devtools"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "unplugin": "^3.2.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^8.0.1",
+    "@babel/generator": "^8.0.0",
+    "@babel/parser": "^8.0.0",
+    "@babel/plugin-syntax-jsx": "^8.0.1",
+    "@babel/traverse": "^8.0.0",
+    "@babel/types": "^8.0.0"
+  },
+  "peerDependencies": {
+    "@babel/core": ">=7.0.0"
+  }
+}
