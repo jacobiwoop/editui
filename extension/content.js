@@ -1,19 +1,19 @@
 // == EditUI — Content Script ===========================================
-// Picker, toolbar flottante (Shadow DOM), génération de prompt.
 
-// ---- État global ----
 const state = {
   active: false,
   hoverEl: null,
   selectedEl: null,
   originalStyles: {},
-  toolbarRoot: null,
-  panelRoot: null,
   changes: [],
+  barRoot: null,
+  panelRoot: null,
+  collapsed: false,
+  barTop: null, // px from top, null = use bottom:0
 }
 
-// ---- Initialisation ----
-async function init() {
+// ---- Init ----
+function init() {
   injectPickerStyles()
   document.addEventListener('mouseover', onHover, true)
   document.addEventListener('mouseout', onOut, true)
@@ -21,45 +21,27 @@ async function init() {
   document.addEventListener('keydown', onKey, true)
 }
 
-// ---- Picker styles (injectés dans la page) ----
+// ---- Picker styles (page-level, not shadow) ----
 function injectPickerStyles() {
+  if (document.getElementById('editui-picker-style')) return
   const style = document.createElement('style')
   style.id = 'editui-picker-style'
   style.textContent = `
-    .editui-picker-hover {
-      outline: 2px solid #667eea !important;
-      outline-offset: 2px !important;
-      transition: outline 0.1s !important;
-    }
-    .editui-picker-selected {
-      outline: 3px solid #4ade80 !important;
-      outline-offset: 2px !important;
-    }
+    .editui-hover { outline: 2px solid #667eea !important; outline-offset: 2px !important; }
+    .editui-selected { outline: 3px solid #4ade80 !important; outline-offset: 2px !important; }
   `
   document.head.appendChild(style)
 }
 
-function togglePickerStyles(enable) {
-  const el = document.getElementById('editui-picker-style')
-  if (el) el.disabled = !enable
-  if (!enable) {
-    document.querySelectorAll('.editui-picker-hover, .editui-picker-selected')
-      .forEach(el => el.classList.remove('editui-picker-hover', 'editui-picker-selected'))
-  }
-}
-
-// ---- Gestionnaires d'événements ----
+// ---- Event handlers ----
 function onHover(e) {
   if (!state.active) return
+  const host = document.getElementById('editui-bar-host')
+  if (host && (host === e.target || host.contains(e.target))) return
+  if (state.selectedEl === e.target) return
   clearHover()
-
-  const el = e.target
-  if (el === state.selectedEl) return
-  // Ne pas survoler la toolbar
-  if (state.toolbarRoot && state.toolbarRoot.contains(e.target)) return
-
-  state.hoverEl = el
-  el.classList.add('editui-picker-hover')
+  state.hoverEl = e.target
+  e.target.classList.add('editui-hover')
 }
 
 function onOut(e) {
@@ -69,465 +51,372 @@ function onOut(e) {
 
 function clearHover() {
   if (state.hoverEl) {
-    state.hoverEl.classList.remove('editui-picker-hover')
+    state.hoverEl.classList.remove('editui-hover')
     state.hoverEl = null
   }
 }
 
 function onClick(e) {
   if (!state.active) return
-
-  // Ignorer clics dans la toolbar
-  if (state.toolbarRoot && state.toolbarRoot.contains(e.target)) return
-  // Ignorer clics dans le panel
-  if (state.panelRoot && state.panelRoot.contains(e.target)) return
+  // Ignore clicks inside bar or panel
+  const barHost = document.getElementById('editui-bar-host')
+  if (barHost && (barHost === e.target || barHost.contains(e.target))) return
+  const panelHost = document.getElementById('editui-panel-host')
+  if (panelHost && (panelHost === e.target || panelHost.contains(e.target))) return
 
   e.preventDefault()
   e.stopPropagation()
-
   selectElement(e.target)
 }
 
 function onKey(e) {
-  if (!state.active) return
   if (e.key === 'Escape') {
-    if (state.panelRoot) {
-      closePanel()
-      return
-    }
-    if (state.selectedEl) {
-      deselectElement()
-      return
-    }
+    if (state.panelRoot) { closePanel(); return }
+    if (state.selectedEl) { deselectElement() }
   }
 }
 
-// ---- Sélection / désélection ----
+// ---- Select / deselect ----
 function selectElement(el) {
   deselectElement()
   state.selectedEl = el
-  state.originalStyles = captureOriginalStyles(el)
-  el.classList.add('editui-picker-selected')
+  state.originalStyles = captureStyles(el)
+  state.changes = []
+  el.classList.add('editui-selected')
   clearHover()
-  showToolbar(el)
-}
-
-function captureOriginalStyles(el) {
-  const cs = getComputedStyle(el)
-  return {
-    fontSize: cs.fontSize,
-    fontWeight: cs.fontWeight,
-    color: cs.color,
-    backgroundColor: cs.backgroundColor,
-    padding: cs.padding,
-    borderRadius: cs.borderRadius,
-    textAlign: cs.textAlign,
-  }
+  if (state.barRoot) updateBarInfo()
 }
 
 function deselectElement() {
   if (state.selectedEl) {
-    state.selectedEl.classList.remove('editui-picker-selected')
+    state.selectedEl.classList.remove('editui-selected')
     state.selectedEl = null
   }
-  hideToolbar()
+  state.originalStyles = {}
   state.changes = []
+  if (state.barRoot) updateBarInfo()
 }
 
-// ---- Toolbar (Shadow DOM) ----
-function getToolbarTemplate() {
+function captureStyles(el) {
+  const cs = getComputedStyle(el)
+  return {
+    fontSize:        cs.fontSize,
+    fontWeight:      cs.fontWeight,
+    color:           cs.color,
+    backgroundColor: cs.backgroundColor,
+    padding:         cs.padding,
+    borderRadius:    cs.borderRadius,
+    textAlign:       cs.textAlign,
+  }
+}
+
+// ---- Bar ----
+function showBar() {
+  if (document.getElementById('editui-bar-host')) return
+
+  const host = document.createElement('div')
+  host.id = 'editui-bar-host'
+  document.body.appendChild(host)
+
+  const shadow = host.attachShadow({ mode: 'open' })
+
+  const link = document.createElement('link')
+  link.rel = 'stylesheet'
+  link.href = chrome.runtime.getURL('toolbar.css')
+  shadow.appendChild(link)
+
+  const wrapper = document.createElement('div')
+  wrapper.innerHTML = getBarTemplate()
+  shadow.appendChild(wrapper)
+
+  state.barRoot = shadow
+  positionBar(shadow)
+  updateBarInfo()
+  fillControls(shadow)
+  setupBarListeners(shadow)
+  setupCircleDrag(shadow)
+}
+
+function hideBar() {
+  const host = document.getElementById('editui-bar-host')
+  if (host) host.remove()
+  state.barRoot = null
+}
+
+function getBarTemplate() {
   return `
-  <div class="editui-toolbar" id="editui-toolbar">
-    <div class="editui-tb-header">
-      <span class="editui-tb-title">EditUI</span>
-      <div class="editui-tb-actions">
-        <button class="editui-tb-btn" data-action="minimize">─</button>
-        <button class="editui-tb-btn" data-action="close">✕</button>
-      </div>
+  <div class="editui-bar" id="editui-bar">
+    <div class="editui-circle" id="editui-circle" title="EditUI — drag pour déplacer">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+        <path d="M3 5h18M3 12h18M3 19h18" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
     </div>
-    <div class="editui-tb-info" id="tb-info"></div>
-    <div class="editui-tb-controls" id="tb-controls">
-      <div class="editui-tb-field">
-        <label>Font size</label>
-        <input type="text" id="ctl-font-size" placeholder="16px" />
+
+    <div class="editui-bar-content" id="editui-bar-content">
+      <div class="editui-bar-info" id="bar-info">
+        <span class="hint">Cliquez un élément pour le sélectionner</span>
       </div>
-      <div class="editui-tb-field">
-        <label>Font weight</label>
-        <select id="ctl-font-weight">
-          <option value="">—</option>
-          <option value="400">Normal (400)</option>
-          <option value="500">Medium (500)</option>
-          <option value="600">Semi Bold (600)</option>
-          <option value="700">Bold (700)</option>
-        </select>
+
+      <div class="editui-sep"></div>
+
+      <div class="editui-controls" id="bar-controls">
+        <label>Fs<input type="text" id="ctl-font-size" placeholder="16px" /></label>
+        <label>Fw
+          <select id="ctl-font-weight">
+            <option value="">—</option>
+            <option value="400">400</option>
+            <option value="500">500</option>
+            <option value="600">600</option>
+            <option value="700">700</option>
+          </select>
+        </label>
+        <label>Clr<input type="text" id="ctl-color" placeholder="#333" /></label>
+        <label>Bg<input type="text" id="ctl-bg" placeholder="—" /></label>
+        <label>Pad<input type="text" id="ctl-padding" placeholder="12px" /></label>
+        <label>R<input type="text" id="ctl-radius" placeholder="0px" /></label>
+        <label>Align
+          <select id="ctl-align">
+            <option value="">—</option>
+            <option value="left">L</option>
+            <option value="center">C</option>
+            <option value="right">R</option>
+          </select>
+        </label>
       </div>
-      <div class="editui-tb-field">
-        <label>Text color</label>
-        <input type="text" id="ctl-color" placeholder="#333" />
-      </div>
-      <div class="editui-tb-field">
-        <label>Background</label>
-        <input type="text" id="ctl-bg" placeholder="transparent" />
-      </div>
-      <div class="editui-tb-field">
-        <label>Padding</label>
-        <input type="text" id="ctl-padding" placeholder="12px" />
-      </div>
-      <div class="editui-tb-field">
-        <label>Border radius</label>
-        <input type="text" id="ctl-radius" placeholder="8px" />
-      </div>
-      <div class="editui-tb-field">
-        <label>Text align</label>
-        <select id="ctl-align">
-          <option value="">—</option>
-          <option value="left">Gauche</option>
-          <option value="center">Centre</option>
-          <option value="right">Droite</option>
-        </select>
-      </div>
-    </div>
-    <div class="editui-tb-free">
-      <textarea id="tb-free-input" placeholder="Instructions libres (ex: 'Ajouter une ombre portée')" rows="2"></textarea>
-    </div>
-    <div class="editui-tb-footer">
-      <button class="editui-tb-primary" id="tb-copy-prompt">📋 Copier le prompt</button>
-      <button class="editui-tb-secondary" id="tb-show-prompt">👁</button>
+
+      <div class="editui-sep"></div>
+
+      <textarea id="tb-free-input" placeholder="Instructions libres…" rows="1"></textarea>
+
+      <button class="editui-copy-btn" id="tb-copy-prompt">📋 Copier</button>
     </div>
   </div>`
 }
 
-function showToolbar(el) {
-  hideToolbar()
-
-  // Charger CSS
-  const cssUrl = chrome.runtime.getURL('toolbar.css')
-
-  // Créer le host Shadow DOM
-  const host = document.createElement('div')
-  host.id = 'editui-toolbar-host'
-  document.body.appendChild(host)
-
-  const shadow = host.attachShadow({ mode: 'closed' })
-
-  // Charger le CSS dans le shadow
-  const link = document.createElement('link')
-  link.rel = 'stylesheet'
-  link.href = cssUrl
-  shadow.appendChild(link)
-
-  // Injecter le template
-  const wrapper = document.createElement('div')
-  wrapper.innerHTML = getToolbarTemplate()
-  shadow.appendChild(wrapper)
-
-  state.toolbarRoot = shadow
-
-  // Remplir les infos
-  fillToolbarInfo(shadow, el)
-
-  // Lire les computed styles
-  fillComputedStyles(shadow, el)
-
-  // Positionner la toolbar
-  positionToolbar(shadow, el)
-
-  // Écouteurs
-  setupToolbarListeners(shadow, el)
-
-  // Drag
-  setupDrag(shadow)
+function positionBar(shadow) {
+  const bar = shadow.getElementById('editui-bar')
+  if (!bar) return
+  if (state.barTop !== null) {
+    bar.style.top = state.barTop + 'px'
+    bar.style.bottom = 'auto'
+  } else {
+    bar.style.bottom = '0'
+    bar.style.top = 'auto'
+  }
 }
 
-function hideToolbar() {
-  const host = document.getElementById('editui-toolbar-host')
-  if (host) host.remove()
-  state.toolbarRoot = null
-}
+function updateBarInfo() {
+  if (!state.barRoot) return
+  const info = state.barRoot.getElementById('bar-info')
+  if (!info) return
 
-function fillToolbarInfo(shadow, el) {
-  const info = shadow.getElementById('tb-info')
+  const el = state.selectedEl
+  if (!el) {
+    info.innerHTML = `<span class="hint">Cliquez un élément pour le sélectionner</span>`
+    return
+  }
+
   const file = el.getAttribute('data-editui-file')
   const line = el.getAttribute('data-editui-line')
-  const component = el.getAttribute('data-editui-component')
-
-  const tag = el.tagName.toLowerCase()
-  const classes = Array.from(el.classList).slice(0, 5).join('.')
-  const selector = classes ? `${tag}.${classes}` : tag
+  const comp = el.getAttribute('data-editui-component')
+  const tag  = el.tagName.toLowerCase()
+  const cls  = Array.from(el.classList).filter(c => !c.startsWith('editui-')).slice(0, 3).join('.')
 
   if (file) {
     info.innerHTML = `
-      <span class="file">${escapeHtml(file)}</span>:<span class="line">${line || '?'}</span>
-      &nbsp;<span class="comp">[${escapeHtml(component || '?')}]</span>
+      <span class="file">${esc(file)}</span><span class="line">:${line || '?'}</span>
+      <span class="comp">[${esc(comp || '?')}]</span>
     `
   } else {
-    info.innerHTML = `<span style="color:#999">&lt;${selector}&gt;</span>`
+    info.innerHTML = `<span class="tag">&lt;${tag}${cls ? '.' + cls : ''}&gt;</span>`
   }
+
+  fillControls(state.barRoot)
 }
 
-function fillComputedStyles(shadow, el) {
-  const cs = getComputedStyle(el)
-
-  setField(shadow, 'ctl-font-size', cs.fontSize)
-  setField(shadow, 'ctl-font-weight', cs.fontWeight)
-  setField(shadow, 'ctl-color', cs.color)
-  setField(shadow, 'ctl-bg', cs.backgroundColor)
-  setField(shadow, 'ctl-padding', cs.padding)
-  setField(shadow, 'ctl-radius', cs.borderRadius)
-
-  // Text align
-  const align = cs.textAlign
-  const alignSel = shadow.getElementById('ctl-align')
-  if (alignSel) {
-    const opt = alignSel.querySelector(`option[value="${align}"]`)
-    if (opt) alignSel.value = align
-  }
+function fillControls(shadow) {
+  if (!state.selectedEl) return
+  const s = state.originalStyles
+  setVal(shadow, 'ctl-font-size',   s.fontSize)
+  setVal(shadow, 'ctl-font-weight', s.fontWeight)
+  setVal(shadow, 'ctl-color',       s.color)
+  setVal(shadow, 'ctl-bg',          s.backgroundColor)
+  setVal(shadow, 'ctl-padding',     s.padding)
+  setVal(shadow, 'ctl-radius',      s.borderRadius)
+  const align = shadow.getElementById('ctl-align')
+  if (align && s.textAlign) align.value = s.textAlign
 }
 
-function setField(shadow, id, value) {
+function setVal(shadow, id, value) {
   const el = shadow.getElementById(id)
-  if (el) el.value = value
+  if (el) el.value = value || ''
 }
 
-function positionToolbar(shadow, el) {
-  const tb = shadow.querySelector('.editui-toolbar')
-  if (!tb) return
-
-  const rect = el.getBoundingClientRect()
-  const tbHeight = 340
-  const spaceBelow = window.innerHeight - rect.bottom
-  const spaceAbove = rect.top
-
-  let top
-  if (spaceBelow >= tbHeight + 10) {
-    top = rect.bottom + 6
-  } else if (spaceAbove >= tbHeight + 10) {
-    top = rect.top - tbHeight - 6
-  } else {
-    top = Math.max(6, rect.top - tbHeight / 2)
-  }
-
-  // Centrer horizontalement
-  let left = rect.left + rect.width / 2 - 150
-  left = Math.max(6, Math.min(left, window.innerWidth - 306))
-
-  tb.style.top = top + 'px'
-  tb.style.left = left + 'px'
-}
-
-function setupToolbarListeners(shadow, el) {
-  // Minimize
-  shadow.querySelector('[data-action="minimize"]')?.addEventListener('click', () => {
-    const controls = shadow.getElementById('tb-controls')
-    const free = shadow.querySelector('.editui-tb-free')
-    const footer = shadow.querySelector('.editui-tb-footer')
-    const info = shadow.querySelector('.editui-tb-info')
-    const hidden = controls.style.display === 'none'
-    controls.style.display = hidden ? '' : 'none'
-    free.style.display = hidden ? '' : 'none'
-    footer.style.display = hidden ? '' : 'none'
-    info.style.display = hidden ? '' : 'none'
+function setupBarListeners(shadow) {
+  // Toggle collapse
+  shadow.getElementById('editui-circle')?.addEventListener('click', () => {
+    state.collapsed = !state.collapsed
+    const content = shadow.getElementById('editui-bar-content')
+    if (content) content.style.display = state.collapsed ? 'none' : ''
   })
 
-  // Close
-  shadow.querySelector('[data-action="close"]')?.addEventListener('click', () => {
-    deselectElement()
+  // Controls → live apply
+  const apply = () => applyChanges(shadow)
+  shadow.querySelectorAll('#bar-controls input, #bar-controls select').forEach(el => {
+    el.addEventListener('input', apply)
+    el.addEventListener('change', apply)
   })
+  shadow.getElementById('tb-free-input')?.addEventListener('input', apply)
 
-  // Copy prompt
+  // Copy
   shadow.getElementById('tb-copy-prompt')?.addEventListener('click', () => {
-    const prompt = buildPrompt(el)
+    if (!state.selectedEl) return
+    const prompt = buildPrompt()
     navigator.clipboard.writeText(prompt).then(() => {
       const btn = shadow.getElementById('tb-copy-prompt')
       btn.textContent = '✓ Copié !'
       btn.classList.add('copied')
       setTimeout(() => {
-        btn.textContent = '📋 Copier le prompt'
+        btn.textContent = '📋 Copier'
         btn.classList.remove('copied')
       }, 2000)
-    }).catch(() => {
-      // Fallback: show inline
-      showPromptPanel(prompt)
-    })
+    }).catch(() => showPromptPanel(buildPrompt()))
   })
-
-  // Show prompt panel
-  shadow.getElementById('tb-show-prompt')?.addEventListener('click', () => {
-    const prompt = buildPrompt(el)
-    showPromptPanel(prompt)
-  })
-
-  // Contrôles → apply en direct
-  const apply = () => applyChanges(el, shadow)
-  shadow.querySelectorAll('#tb-controls input, #tb-controls select').forEach(input => {
-    input.addEventListener('input', apply)
-    input.addEventListener('change', apply)
-  })
-  shadow.getElementById('tb-free-input')?.addEventListener('input', apply)
 }
 
-function applyChanges(el, shadow) {
+// ---- Circle drag → moves bar vertically ----
+function setupCircleDrag(shadow) {
+  const circle = shadow.getElementById('editui-circle')
+  const bar    = shadow.getElementById('editui-bar')
+  if (!circle || !bar) return
+
+  let dragging = false
+  let startY, startBarTop
+
+  circle.addEventListener('mousedown', (e) => {
+    // Only drag, don't toggle, on actual move
+    dragging = false
+    startY = e.clientY
+    startBarTop = bar.getBoundingClientRect().top
+    e.preventDefault()
+
+    const onMove = (e) => {
+      const dy = e.clientY - startY
+      if (!dragging && Math.abs(dy) > 4) dragging = true
+      if (!dragging) return
+      let newTop = startBarTop + dy
+      newTop = Math.max(0, Math.min(newTop, window.innerHeight - bar.offsetHeight))
+      bar.style.top = newTop + 'px'
+      bar.style.bottom = 'auto'
+      state.barTop = newTop
+    }
+
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+      // If barely moved → treat as click (toggle)
+      if (!dragging) {
+        state.collapsed = !state.collapsed
+        const content = shadow.getElementById('editui-bar-content')
+        if (content) content.style.display = state.collapsed ? 'none' : ''
+      }
+    }
+
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  })
+
+  // Prevent the click listener above from double-firing
+  circle.addEventListener('click', (e) => e.stopPropagation())
+}
+
+// ---- Apply CSS changes ----
+function applyChanges(shadow) {
+  if (!state.selectedEl) return
   state.changes = []
-  const prev = {}
 
   const fields = [
-    { id: 'ctl-font-size', prop: 'font-size', css: 'fontSize' },
-    { id: 'ctl-font-weight', prop: 'font-weight', css: 'fontWeight' },
-    { id: 'ctl-color', prop: 'color', css: 'color' },
-    { id: 'ctl-bg', prop: 'background-color', css: 'backgroundColor' },
-    { id: 'ctl-padding', prop: 'padding', css: 'padding' },
-    { id: 'ctl-radius', prop: 'border-radius', css: 'borderRadius' },
+    { id: 'ctl-font-size',   prop: 'font-size',        css: 'fontSize' },
+    { id: 'ctl-font-weight', prop: 'font-weight',       css: 'fontWeight' },
+    { id: 'ctl-color',       prop: 'color',             css: 'color' },
+    { id: 'ctl-bg',          prop: 'background-color',  css: 'backgroundColor' },
+    { id: 'ctl-padding',     prop: 'padding',           css: 'padding' },
+    { id: 'ctl-radius',      prop: 'border-radius',     css: 'borderRadius' },
   ]
 
-  for (const field of fields) {
-    const input = shadow.getElementById(field.id)
+  for (const f of fields) {
+    const input = shadow.getElementById(f.id)
     if (!input) continue
     const value = input.value.trim()
-    if (!value) continue
-
-    const original = state.originalStyles[field.css] || ''
-    if (value !== original) {
-      el.style[field.css] = value
-      state.changes.push({ prop: field.prop, from: original, to: value })
+    const original = state.originalStyles[f.css] || ''
+    if (value && value !== original) {
+      state.selectedEl.style[f.css] = value
+      state.changes.push({ prop: f.prop, from: original, to: value })
     }
   }
 
-  // Text align
   const align = shadow.getElementById('ctl-align')?.value
   if (align) {
     const original = state.originalStyles.textAlign || ''
     if (align !== original) {
-      el.style.textAlign = align
+      state.selectedEl.style.textAlign = align
       state.changes.push({ prop: 'text-align', from: original, to: align })
     }
   }
 }
 
-function setupDrag(shadow) {
-  const tb = shadow.querySelector('.editui-toolbar')
-  const header = shadow.querySelector('.editui-tb-header')
-  if (!tb || !header) return
+// ---- Build prompt ----
+function buildPrompt() {
+  const el = state.selectedEl
+  if (!el) return ''
 
-  let isDragging = false
-  let startX, startY, startLeft, startTop
-
-  header.addEventListener('mousedown', (e) => {
-    isDragging = true
-    const rect = tb.getBoundingClientRect()
-    startX = e.clientX
-    startY = e.clientY
-    startLeft = rect.left
-    startTop = rect.top
-    tb.style.cursor = 'grabbing'
-  })
-
-  document.addEventListener('mousemove', (e) => {
-    if (!isDragging) return
-    const dx = e.clientX - startX
-    const dy = e.clientY - startY
-    tb.style.left = (startLeft + dx) + 'px'
-    tb.style.top = (startTop + dy) + 'px'
-  })
-
-  document.addEventListener('mouseup', () => {
-    if (isDragging) {
-      isDragging = false
-      tb.style.cursor = ''
-    }
-  })
-}
-
-// ---- Prompt ----
-function buildPrompt(el) {
-  const url = location.href
+  const url       = location.href
   const framework = detectFramework()
-  const tag = el.tagName.toLowerCase()
-  const classes = Array.from(el.classList).join(' ')
-  const text = (el.textContent || '').trim().slice(0, 100)
-  const selector = buildSelector(el)
-
-  const file = el.getAttribute('data-editui-file')
-  const line = el.getAttribute('data-editui-line')
+  const tag       = el.tagName.toLowerCase()
+  const classes   = Array.from(el.classList).filter(c => !c.startsWith('editui-')).join(' ')
+  const text      = (el.textContent || '').trim().slice(0, 100)
+  const selector  = buildSelector(el)
+  const file      = el.getAttribute('data-editui-file')
+  const line      = el.getAttribute('data-editui-line')
   const component = el.getAttribute('data-editui-component')
-  const richMode = !!(file || component)
+  const freeInput = state.barRoot?.getElementById('tb-free-input')?.value?.trim()
 
-  const freeInput = state.toolbarRoot?.getElementById('tb-free-input')?.value?.trim()
+  let p = `[EditUI Context]\n\n`
+  p += `Page: ${url}\n`
+  p += `Framework: ${framework}\n\n`
 
-  let prompt = `[EditUI Context]\n\n`
-  prompt += `Page: ${url}\n`
-  prompt += `Framework: ${framework}\n\n`
-
-  if (richMode) {
-    prompt += `Component: ${component || '?'}\n`
-    prompt += `File: ${file || '?'}\n`
-    prompt += `Line: ${line || '?'}\n\n`
+  if (file) {
+    p += `Component: ${component || '?'}\n`
+    p += `File: ${file}\n`
+    p += `Line: ${line || '?'}\n\n`
   }
 
-  prompt += `Element: <${tag}>\n`
-  prompt += `Classes: ${classes || '(none)'}\n`
-  prompt += `Selector: ${selector}\n`
-  if (text) prompt += `\nText: "${text}"\n`
+  p += `Element: <${tag}>\n`
+  p += `Classes: ${classes || '(none)'}\n`
+  p += `Selector: ${selector}\n`
+  if (text) p += `Text: "${text}"\n`
 
-  prompt += `\nRequested changes:\n`
-
-  if (state.changes.length === 0 && !freeInput) {
-    prompt += `  (no changes — visual inspection)\n`
+  p += `\nRequested changes:\n`
+  if (!state.changes.length && !freeInput) {
+    p += `  (aucun changement — inspection visuelle)\n`
   }
+  for (const c of state.changes) p += `- ${c.prop}: ${c.from} → ${c.to}\n`
+  if (freeInput) p += `- Free instruction: "${freeInput}"\n`
 
-  for (const c of state.changes) {
-    prompt += `- ${c.prop}: ${c.from} → ${c.to}\n`
-  }
-
-  if (freeInput) {
-    prompt += `- Free instruction: "${freeInput}"\n`
-  }
-
-  return prompt
+  return p
 }
 
-function detectFramework() {
-  // React detection
-  const root = document.getElementById('root') || document.body
-  const reactMarkers = Object.keys(root).filter(k =>
-    k.startsWith('__reactFiber') || k.startsWith('_reactRootContainer')
-  )
-  if (reactMarkers.length > 0) return 'React'
-
-  // Vue detection
-  const vueMarker = document.body.__vue_app__ ||
-    document.querySelector('[data-v-app]')
-  if (vueMarker) return 'Vue'
-
-  return 'Unknown'
-}
-
-function buildSelector(el) {
-  const parts = []
-  let current = el
-  while (current && current !== document.body) {
-    const tag = current.tagName.toLowerCase()
-    const id = current.id ? `#${current.id}` : ''
-    const cls = Array.from(current.classList).slice(0, 2).map(c => `.${c}`).join('')
-    parts.unshift(`${tag}${id}${cls}`)
-    current = current.parentElement
-  }
-  return parts.join(' > ') || el.tagName.toLowerCase()
-}
-
-// ---- Panel de prompt ----
+// ---- Prompt panel ----
 function showPromptPanel(prompt) {
   closePanel()
-
   const host = document.createElement('div')
   host.id = 'editui-panel-host'
   document.body.appendChild(host)
 
-  const shadow = host.attachShadow({ mode: 'closed' })
-
-  const cssUrl = chrome.runtime.getURL('toolbar.css')
+  const shadow = host.attachShadow({ mode: 'open' })
   const link = document.createElement('link')
   link.rel = 'stylesheet'
-  link.href = cssUrl
+  link.href = chrome.runtime.getURL('toolbar.css')
   shadow.appendChild(link)
 
   const wrapper = document.createElement('div')
@@ -535,58 +424,64 @@ function showPromptPanel(prompt) {
     <div class="editui-panel-overlay">
       <div class="editui-panel">
         <div class="editui-panel-header">
-          <h3>✦ Prompt EditUI</h3>
-          <button class="editui-panel-close" id="panel-close">✕</button>
+          <span>Prompt EditUI</span>
+          <button id="panel-close">✕</button>
         </div>
-        <div class="editui-panel-body">
-          <pre>${escapeHtml(prompt)}</pre>
-        </div>
+        <div class="editui-panel-body"><pre>${esc(prompt)}</pre></div>
         <div class="editui-panel-footer">
-          <button class="editui-tb-primary" id="panel-copy">📋 Copier</button>
-          <button class="editui-tb-secondary" id="panel-close-btn">Fermer</button>
+          <button class="editui-copy-btn" id="panel-copy">📋 Copier</button>
+          <button class="editui-sec-btn" id="panel-close-btn">Fermer</button>
         </div>
       </div>
-    </div>
-  `
+    </div>`
   shadow.appendChild(wrapper)
   state.panelRoot = shadow
 
+  const close = () => closePanel()
+  shadow.getElementById('panel-close')?.addEventListener('click', close)
+  shadow.getElementById('panel-close-btn')?.addEventListener('click', close)
+  shadow.querySelector('.editui-panel-overlay')?.addEventListener('click', e => {
+    if (e.target === e.currentTarget) close()
+  })
   shadow.getElementById('panel-copy')?.addEventListener('click', () => {
     navigator.clipboard.writeText(prompt)
     const btn = shadow.getElementById('panel-copy')
     btn.textContent = '✓ Copié !'
     setTimeout(() => btn.textContent = '📋 Copier', 1500)
   })
-
-  const close = () => closePanel()
-  shadow.getElementById('panel-close')?.addEventListener('click', close)
-  shadow.getElementById('panel-close-btn')?.addEventListener('click', close)
-  shadow.querySelector('.editui-panel-overlay')?.addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) close()
-  })
 }
 
 function closePanel() {
-  const host = document.getElementById('editui-panel-host')
-  if (host) host.remove()
+  document.getElementById('editui-panel-host')?.remove()
   state.panelRoot = null
 }
 
-// ---- Messages du popup ----
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (msg.type === 'EDITUI_TOGGLE') {
-    state.active = !state.active
-    togglePickerStyles(state.active)
-    if (!state.active) deselectElement()
-    sendResponse({ active: state.active })
+// ---- Framework detection ----
+function detectFramework() {
+  const root = document.getElementById('root') || document.body
+  if (Object.keys(root).some(k => k.startsWith('__reactFiber') || k.startsWith('_reactRootContainer')))
+    return 'React'
+  if (document.body.__vue_app__ || document.querySelector('[data-v-app]'))
+    return 'Vue'
+  return 'Unknown'
+}
+
+// ---- CSS selector builder ----
+function buildSelector(el) {
+  const parts = []
+  let cur = el
+  while (cur && cur !== document.body) {
+    const tag = cur.tagName.toLowerCase()
+    const id  = cur.id ? `#${cur.id}` : ''
+    const cls = Array.from(cur.classList).filter(c => !c.startsWith('editui-')).slice(0, 2).map(c => `.${c}`).join('')
+    parts.unshift(`${tag}${id}${cls}`)
+    cur = cur.parentElement
   }
-  if (msg.type === 'EDITUI_STATUS') {
-    sendResponse({ active: state.active })
-  }
-})
+  return parts.join(' > ') || el.tagName.toLowerCase()
+}
 
 // ---- Utils ----
-function escapeHtml(str) {
+function esc(str) {
   return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -594,7 +489,26 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;')
 }
 
-// ---- Démarrage ----
+// ---- Messages from popup ----
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.type === 'EDITUI_TOGGLE') {
+    state.active = !state.active
+    if (state.active) {
+      showBar()
+    } else {
+      deselectElement()
+      hideBar()
+      document.querySelectorAll('.editui-hover, .editui-selected')
+        .forEach(el => el.classList.remove('editui-hover', 'editui-selected'))
+    }
+    sendResponse({ active: state.active })
+  }
+  if (msg.type === 'EDITUI_STATUS') {
+    sendResponse({ active: state.active })
+  }
+})
+
+// ---- Start ----
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init)
 } else {

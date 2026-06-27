@@ -1,157 +1,141 @@
-/* ===========================================================
-   EditUI — Toolbar + Picker styles
-   Injecté via Shadow DOM — jamais de fuite de styles
-   =========================================================== */
+/* == EditUI Toolbar — Shadow DOM styles == */
 
-/* ---- Picker highlight (applied to page elements, not shadow DOM) ---- */
-.editui-picker-selected {
-  outline: 3px solid #4ade80 !important;
-  outline-offset: 2px !important;
-}
-
-/* ---- Toolbar container ---- */
-.editui-toolbar {
+/* ---- Bar ---- */
+.editui-bar {
   all: initial;
-  display: flex;
-  flex-direction: column;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  font-size: 12px;
-  color: #e6e6e6;
-  background: #1d1d1f;
-  border: 1px solid #333;
-  border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   position: fixed;
-  z-index: 2147483647;
-  min-width: 260px;
-  max-width: 320px;
-  user-select: none;
-}
-
-/* ---- Header ---- */
-.editui-tb-header {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 48px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 8px 10px 6px;
+  background: #1a1a1f;
+  border-top: 1px solid #2e2e35;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.35);
+  z-index: 2147483647;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-size: 12px;
+  color: #d4d4d8;
+  user-select: none;
+  gap: 0;
+}
+
+/* ---- Circle toggle ---- */
+.editui-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #667eea;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 10px;
+  flex-shrink: 0;
   cursor: grab;
-  border-bottom: 1px solid #2a2a2e;
+  transition: background 0.15s, transform 0.1s;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
 }
-.editui-tb-header:active { cursor: grabbing; }
+.editui-circle:hover { background: #7c8ff5; transform: scale(1.05); }
+.editui-circle:active { cursor: grabbing; transform: scale(0.96); }
 
-.editui-tb-title {
-  font-weight: 600;
-  font-size: 11px;
-  color: #999;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.editui-tb-actions {
+/* ---- Bar content (collapsible) ---- */
+.editui-bar-content {
   display: flex;
-  gap: 4px;
+  align-items: center;
+  flex: 1;
+  gap: 0;
+  overflow: hidden;
+  height: 100%;
 }
-.editui-tb-btn {
-  background: none;
-  border: none;
-  color: #888;
-  cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 14px;
-  line-height: 1;
-}
-.editui-tb-btn:hover { background: #333; color: #fff; }
 
-/* ---- Element infos ---- */
-.editui-tb-info {
-  padding: 6px 10px;
+/* ---- Element info ---- */
+.editui-bar-info {
+  padding: 0 12px;
   font-family: 'SF Mono', 'Fira Code', monospace;
-  font-size: 10px;
-  color: #888;
-  background: #161618;
-  border-bottom: 1px solid #2a2a2e;
+  font-size: 11px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.editui-tb-info .file { color: #6bf; }
-.editui-tb-info .line { color: #afa; }
-.editui-tb-info .comp { color: #fa6; }
+.editui-bar-info .hint { color: #555; font-style: italic; font-family: inherit; }
+.editui-bar-info .file { color: #6badf7; }
+.editui-bar-info .line { color: #86efac; }
+.editui-bar-info .comp { color: #fbbf24; margin-left: 4px; }
+.editui-bar-info .tag  { color: #a78bfa; }
 
-/* ---- Controls grid ---- */
-.editui-tb-controls {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  padding: 8px 10px;
+/* ---- Separator ---- */
+.editui-sep {
+  width: 1px;
+  height: 28px;
+  background: #2e2e35;
+  flex-shrink: 0;
 }
 
-.editui-tb-field {
+/* ---- Controls row ---- */
+.editui-controls {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  flex-shrink: 0;
 }
 
-.editui-tb-field label {
+.editui-controls label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-size: 9px;
-  color: #666;
+  color: #555;
   text-transform: uppercase;
   letter-spacing: 0.3px;
+  white-space: nowrap;
 }
 
-.editui-tb-field input,
-.editui-tb-field select {
-  padding: 4px 6px;
+.editui-controls input,
+.editui-controls select {
+  padding: 3px 5px;
   border-radius: 4px;
-  border: 1px solid #333;
-  background: #2a2a2e;
-  color: #e6e6e6;
+  border: 1px solid #2e2e35;
+  background: #26262e;
+  color: #d4d4d8;
   font-size: 11px;
   font-family: inherit;
   outline: none;
-  width: 100%;
+  width: 58px;
+  height: 26px;
 }
-.editui-tb-field input:focus,
-.editui-tb-field select:focus {
+
+.editui-controls select { width: 48px; }
+
+.editui-controls input:focus,
+.editui-controls select:focus {
   border-color: #667eea;
 }
 
-.editui-tb-field input[type="color"] {
-  height: 28px;
-  padding: 2px;
-  cursor: pointer;
-}
-
-/* ---- Free input ---- */
-.editui-tb-free {
-  padding: 0 10px 8px;
-}
-.editui-tb-free textarea {
-  width: 100%;
-  padding: 6px 8px;
+/* ---- Free textarea ---- */
+.editui-bar textarea {
+  padding: 4px 8px;
   border-radius: 4px;
-  border: 1px solid #333;
-  background: #2a2a2e;
-  color: #e6e6e6;
+  border: 1px solid #2e2e35;
+  background: #26262e;
+  color: #d4d4d8;
   font-size: 11px;
   font-family: inherit;
-  resize: vertical;
-  min-height: 40px;
+  resize: none;
+  height: 26px;
+  min-width: 180px;
   outline: none;
+  margin: 0 8px;
+  line-height: 1.4;
 }
-.editui-tb-free textarea:focus {
-  border-color: #667eea;
-}
+.editui-bar textarea:focus { border-color: #667eea; }
 
-/* ---- Footer ---- */
-.editui-tb-footer {
-  display: flex;
-  gap: 6px;
-  padding: 8px 10px;
-  border-top: 1px solid #2a2a2e;
-}
-
-.editui-tb-primary {
-  flex: 1;
-  padding: 6px 12px;
+/* ---- Copy button ---- */
+.editui-copy-btn {
+  padding: 5px 14px;
   border-radius: 6px;
   border: none;
   background: #667eea;
@@ -159,22 +143,14 @@
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
+  margin-right: 10px;
+  height: 28px;
   transition: background 0.15s;
+  flex-shrink: 0;
 }
-.editui-tb-primary:hover { background: #5a6fd6; }
-.editui-tb-primary:active { transform: scale(0.98); }
-.editui-tb-primary.copied { background: #4ade80; }
-
-.editui-tb-secondary {
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: 1px solid #333;
-  background: transparent;
-  color: #888;
-  font-size: 11px;
-  cursor: pointer;
-}
-.editui-tb-secondary:hover { background: #2a2a2e; color: #fff; }
+.editui-copy-btn:hover { background: #7c8ff5; }
+.editui-copy-btn.copied { background: #4ade80; color: #1a1a1f; }
 
 /* ---- Prompt panel ---- */
 .editui-panel-overlay {
@@ -186,23 +162,22 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  font-family: -apple-system, system-ui, sans-serif;
 }
 
 .editui-panel {
-  all: initial;
-  display: block;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  font-size: 13px;
-  color: #e6e6e6;
-  background: #1d1d1f;
+  display: flex;
+  flex-direction: column;
+  background: #1a1a1f;
+  border: 1px solid #2e2e35;
   border-radius: 12px;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
   width: 90%;
   max-width: 560px;
   max-height: 80vh;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  color: #d4d4d8;
+  font-size: 13px;
 }
 
 .editui-panel-header {
@@ -210,25 +185,21 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 1px solid #333;
-}
-
-.editui-panel-header h3 {
-  font-size: 14px;
+  border-bottom: 1px solid #2e2e35;
   font-weight: 600;
-  margin: 0;
+  font-size: 13px;
 }
 
-.editui-panel-close {
+.editui-panel-header button {
   background: none;
   border: none;
-  color: #888;
-  font-size: 18px;
+  color: #777;
+  font-size: 16px;
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 2px 6px;
   border-radius: 4px;
 }
-.editui-panel-close:hover { background: #333; color: #fff; }
+.editui-panel-header button:hover { background: #2e2e35; color: #fff; }
 
 .editui-panel-body {
   padding: 16px;
@@ -240,7 +211,7 @@
   font-family: 'SF Mono', 'Fira Code', monospace;
   font-size: 12px;
   line-height: 1.6;
-  color: #ccc;
+  color: #aaa;
   white-space: pre-wrap;
   word-break: break-word;
   margin: 0;
@@ -250,6 +221,17 @@
   display: flex;
   gap: 8px;
   padding: 12px 16px;
-  border-top: 1px solid #333;
+  border-top: 1px solid #2e2e35;
   justify-content: flex-end;
 }
+
+.editui-sec-btn {
+  padding: 5px 14px;
+  border-radius: 6px;
+  border: 1px solid #2e2e35;
+  background: transparent;
+  color: #777;
+  font-size: 11px;
+  cursor: pointer;
+}
+.editui-sec-btn:hover { background: #26262e; color: #fff; }
