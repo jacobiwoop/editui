@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "EditUI",
+  "version": "0.1.0",
+  "description": "Sélectionnez un élément, modifiez-le visuellement, copiez le prompt pour votre IA",
+  "author": "EditUI",
+
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+
+  "action": {
+    "default_title": "EditUI — Mode picker",
+    "default_popup": "popup.html"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "web_accessible_resources": [
+    {
+      "resources": ["toolbar.css"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+
+  "minimum_chrome_version": "102"
+}
