@@ -244,7 +244,8 @@
       <div class="input-row">
         <span class="lbl">Couleur</span>
         <input type="text" id="bg-color" value="#6c5ce7" oninput="syncSwatch('bg-swatch', this.value); applyBg();">
-        <div class="color-swatch" id="bg-swatch" style="background:#6c5ce7"></div>
+        <input type="color" id="bg-color-picker" value="#6c5ce7" style="display:none" oninput="syncColorInput('bg-color', 'bg-swatch', this.value); applyBg();">
+        <div class="color-swatch" id="bg-swatch" style="background:#6c5ce7" onclick="document.getElementById('bg-color-picker').click()"></div>
       </div>
       <div class="input-row">
         <span class="lbl">Opacity</span>
@@ -279,7 +280,8 @@
       <div class="input-row">
         <span class="lbl">Color</span>
         <input type="text" id="bd-color" value="#ffffff" oninput="syncSwatch('bd-swatch', this.value); applyBorder()">
-        <div class="color-swatch" id="bd-swatch" style="background:#ffffff"></div>
+        <input type="color" id="bd-color-picker" value="#ffffff" style="display:none" oninput="syncColorInput('bd-color', 'bd-swatch', this.value); applyBorder();">
+        <div class="color-swatch" id="bd-swatch" style="background:#ffffff" onclick="document.getElementById('bd-color-picker').click()"></div>
       </div>
     </div>
   </div>
@@ -314,7 +316,8 @@
         <div class="input-row">
           <span class="lbl">Hex</span>
           <input type="text" id="tx-color" value="#ffffff" oninput="syncSwatch('tx-swatch', this.value); applyText()">
-          <div class="color-swatch" id="tx-swatch" style="background:#ffffff"></div>
+          <input type="color" id="tx-color-picker" value="#ffffff" style="display:none" oninput="syncColorInput('tx-color', 'tx-swatch', this.value); applyText();">
+          <div class="color-swatch" id="tx-swatch" style="background:#ffffff" onclick="document.getElementById('tx-color-picker').click()"></div>
         </div>
         <div style="height:120px; background: linear-gradient(to right, red, yellow, green, cyan, blue, magenta, red); border-radius:10px; margin-bottom:10px; border: 1px solid var(--glass-border);"></div>
       </div>
@@ -533,6 +536,12 @@
   function syncSwatch(id, color) {
     const el = document.getElementById(id);
     if (el) el.style.background = color;
+  }
+
+  function syncColorInput(inputId, swatchId, color) {
+    const input = document.getElementById(inputId);
+    if (input) input.value = color;
+    syncSwatch(swatchId, color);
   }
 
   // --- Prompt generator (lit elementState) ---
