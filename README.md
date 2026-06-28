@@ -83,14 +83,26 @@ npm install /path/to/editui/plugin/js
 
 Then replace `react()` in your Vite config:
 
+**Vite:**
+
 ```js
 // vite.config.js
 import { defineConfig } from 'vite'
-import editui from 'editui/vite'
+import editui from '@editui/plugin/vite'
 
 export default defineConfig({
   plugins: [editui()],   // wraps @vitejs/plugin-react — no separate import needed
 })
+```
+
+**Next.js:**
+
+```json
+// .babelrc
+{
+  "presets": ["next/babel"],
+  "plugins": [["./node_modules/@editui/plugin/src/babel-plugin.js"]]
+}
 ```
 
 Every native JSX element gets annotated automatically at dev time:
