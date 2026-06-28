@@ -71,6 +71,16 @@
   }
   .separator { width: 1px; height: 28px; background: var(--glass-border); margin: 0 8px; }
 
+  .toolbar.collapsed {
+    padding: 8px;
+    cursor: grab;
+    left: auto;
+    transform: none;
+  }
+  .toolbar.collapsed:active { cursor: grabbing; }
+  .toolbar-collapsible { display: contents; }
+  .toolbar.collapsed .toolbar-collapsible { display: none; }
+
   .tbtn {
     background: transparent; border: none; color: var(--text-primary);
     width: 36px; height: 36px; border-radius: 12px;
@@ -244,10 +254,11 @@
 
 <div class="toolbar">
 
-  <!-- LOGO -->
-  <button class="tbtn tbtn-logo" title="Aiko">
+  <!-- LOGO — toggle collapse + drag quand fermé -->
+  <button class="tbtn tbtn-logo" id="btn-logo" title="Ouvrir / Fermer">
     <svg viewBox="0 0 24 24" fill="white"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
   </button>
+  <div class="toolbar-collapsible">
   <div class="separator"></div>
 
   <!-- BACKGROUND -->
@@ -417,6 +428,7 @@
     <button class="btn btn-accent btn-full" id="btn-copy-prompt" onclick="copyPrompt()">Copier le Prompt</button>
   </div>
 
+  </div><!-- /toolbar-collapsible -->
 </div>
 
 <script>
@@ -638,6 +650,62 @@
     btn.textContent = msg;
     setTimeout(() => { btn.textContent = original; }, 1200);
   }
+
+  // --- Collapse / expand + drag quand collapsed ---
+  (function () {
+    const toolbar = document.querySelector('.toolbar');
+    const logo = document.getElementById('btn-logo');
+
+    // Convertit la position centrée en px avant de collapse
+    function lockPosition() {
+      const r = toolbar.getBoundingClientRect();
+      toolbar.style.left = r.left + 'px';
+      toolbar.style.top  = r.top  + 'px';
+      toolbar.style.transform = 'none';
+      toolbar.style.bottom = 'auto';
+    }
+
+    function restoreCenter() {
+      toolbar.style.left = '50%';
+      toolbar.style.top  = 'auto';
+      toolbar.style.bottom = '24px';
+      toolbar.style.transform = 'translateX(-50%)';
+    }
+
+    logo.addEventListener('click', () => {
+      const willCollapse = !toolbar.classList.contains('collapsed');
+      closeAllPopovers();
+      if (willCollapse) {
+        lockPosition();
+        toolbar.classList.add('collapsed');
+      } else {
+        toolbar.classList.remove('collapsed');
+        restoreCenter();
+      }
+    });
+
+    // Drag quand collapsed
+    let dragging = false, startX, startY, origLeft, origTop;
+
+    toolbar.addEventListener('mousedown', (e) => {
+      if (!toolbar.classList.contains('collapsed')) return;
+      if (e.target === logo || logo.contains(e.target)) return; // logo = toggle, pas drag
+      dragging = true;
+      startX = e.clientX; startY = e.clientY;
+      const r = toolbar.getBoundingClientRect();
+      origLeft = r.left; origTop = r.top;
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - startX, dy = e.clientY - startY;
+      toolbar.style.left = (origLeft + dx) + 'px';
+      toolbar.style.top  = (origTop  + dy) + 'px';
+    });
+
+    document.addEventListener('mouseup', () => { dragging = false; });
+  })();
 </script>
 
 </body>

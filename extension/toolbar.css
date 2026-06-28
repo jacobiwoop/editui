@@ -1,237 +1,257 @@
 /* == EditUI Toolbar — Shadow DOM styles == */
 
-/* ---- Bar ---- */
-.editui-bar {
-  all: initial;
+*, *::before, *::after { box-sizing: border-box; }
+
+:host {
+  --glass-bg:       rgba(20, 20, 20, 0.65);
+  --glass-popover:  rgba(28, 28, 28, 0.82);
+  --glass-input:    rgba(255, 255, 255, 0.08);
+  --glass-border:   rgba(255, 255, 255, 0.15);
+  --glass-hover:    rgba(255, 255, 255, 0.12);
+  --text-primary:   #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.55);
+  --accent:         #6c5ce7;
+  --accent-grad:    linear-gradient(135deg, #6c5ce7, #a29bfe);
+}
+
+/* ── Toolbar ────────────────────────────────────────────────────────── */
+.toolbar {
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  background: #1a1a1f;
-  border-top: 1px solid #2e2e35;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.35);
-  z-index: 2147483647;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  font-size: 12px;
-  color: #d4d4d8;
-  user-select: none;
-  gap: 0;
-}
-
-/* ---- Circle toggle ---- */
-.editui-circle {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #667eea;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 10px;
-  flex-shrink: 0;
-  cursor: grab;
-  transition: background 0.15s, transform 0.1s;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
-}
-.editui-circle:hover { background: #7c8ff5; transform: scale(1.05); }
-.editui-circle:active { cursor: grabbing; transform: scale(0.96); }
-
-/* ---- Bar content (collapsible) ---- */
-.editui-bar-content {
-  display: flex;
-  align-items: center;
-  flex: 1;
-  gap: 0;
-  overflow: hidden;
-  height: 100%;
-}
-
-/* ---- Element info ---- */
-.editui-bar-info {
-  padding: 0 12px;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  font-size: 11px;
-  white-space: nowrap;
-  flex-shrink: 0;
-  max-width: 280px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.editui-bar-info .hint { color: #555; font-style: italic; font-family: inherit; }
-.editui-bar-info .file { color: #6badf7; }
-.editui-bar-info .line { color: #86efac; }
-.editui-bar-info .comp { color: #fbbf24; margin-left: 4px; }
-.editui-bar-info .tag  { color: #a78bfa; }
-
-/* ---- Separator ---- */
-.editui-sep {
-  width: 1px;
-  height: 28px;
-  background: #2e2e35;
-  flex-shrink: 0;
-}
-
-/* ---- Controls row ---- */
-.editui-controls {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 10px;
-  flex-shrink: 0;
-}
-
-.editui-controls label {
-  display: flex;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  padding: 8px;
+  display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 9px;
-  color: #555;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.45), inset 0 1px 1px rgba(255,255,255,0.1);
+  height: 52px;
+  z-index: 2147483647;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  color: var(--text-primary);
+  user-select: none;
+}
+
+.toolbar.collapsed { cursor: grab; left: auto; transform: none; }
+.toolbar.collapsed:active { cursor: grabbing; }
+.toolbar-collapsible { display: contents; }
+.toolbar.collapsed .toolbar-collapsible { display: none; }
+
+.separator { width: 1px; height: 28px; background: var(--glass-border); margin: 0 4px; flex-shrink: 0; }
+
+/* ── Buttons ────────────────────────────────────────────────────────── */
+.tbtn {
+  background: transparent; border: none; color: var(--text-primary);
+  width: 36px; height: 36px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; position: relative;
+  transition: background 0.15s, box-shadow 0.15s; flex-shrink: 0;
+}
+.tbtn:hover { background: var(--glass-hover); box-shadow: inset 0 1px 1px rgba(255,255,255,0.1); }
+.tbtn.active {
+  background: rgba(108,92,231,0.35);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,0.15), 0 0 0 1px rgba(108,92,231,0.5);
+}
+.tbtn svg { width: 20px; height: 20px; fill: currentColor; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3)); }
+
+.tbtn-logo { background: var(--accent-grad); box-shadow: 0 4px 15px rgba(108,92,231,0.4); }
+.tbtn-logo:hover { background: var(--accent-grad); filter: brightness(1.12); box-shadow: 0 4px 15px rgba(108,92,231,0.5); }
+
+.tbtn-prompt {
+  width: auto; padding: 0 16px; border-radius: 14px; color: #fff;
+  background: var(--accent-grad); box-shadow: 0 4px 15px rgba(108,92,231,0.3);
+  gap: 6px; font-size: 13px; font-weight: 600; font-family: inherit;
+}
+.tbtn-prompt svg { width: 16px; height: 16px; }
+.tbtn-prompt:hover { filter: brightness(1.1); }
+
+/* ── Element info ───────────────────────────────────────────────────── */
+.editui-info {
+  padding: 0 10px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 11px;
   white-space: nowrap;
-}
-
-.editui-controls input,
-.editui-controls select {
-  padding: 3px 5px;
-  border-radius: 4px;
-  border: 1px solid #2e2e35;
-  background: #26262e;
-  color: #d4d4d8;
-  font-size: 11px;
-  font-family: inherit;
-  outline: none;
-  width: 58px;
-  height: 26px;
-}
-
-.editui-controls select { width: 48px; }
-
-.editui-controls input:focus,
-.editui-controls select:focus {
-  border-color: #667eea;
-}
-
-/* ---- Free textarea ---- */
-.editui-bar textarea {
-  padding: 4px 8px;
-  border-radius: 4px;
-  border: 1px solid #2e2e35;
-  background: #26262e;
-  color: #d4d4d8;
-  font-size: 11px;
-  font-family: inherit;
-  resize: none;
-  height: 26px;
-  min-width: 180px;
-  outline: none;
-  margin: 0 8px;
-  line-height: 1.4;
-}
-.editui-bar textarea:focus { border-color: #667eea; }
-
-/* ---- Copy button ---- */
-.editui-copy-btn {
-  padding: 5px 14px;
-  border-radius: 6px;
-  border: none;
-  background: #667eea;
-  color: #fff;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  margin-right: 10px;
-  height: 28px;
-  transition: background 0.15s;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   flex-shrink: 0;
 }
-.editui-copy-btn:hover { background: #7c8ff5; }
-.editui-copy-btn.copied { background: #4ade80; color: #1a1a1f; }
+.editui-info .hint  { color: rgba(255,255,255,0.3); font-style: italic; font-family: inherit; }
+.editui-info .file  { color: #6badf7; }
+.editui-info .line  { color: #86efac; }
+.editui-info .comp  { color: #fbbf24; }
+.editui-info .tag   { color: #a78bfa; }
 
-/* ---- Prompt panel ---- */
-.editui-panel-overlay {
-  all: initial;
-  position: fixed;
-  inset: 0;
-  z-index: 2147483646;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: -apple-system, system-ui, sans-serif;
+/* ── Popovers ───────────────────────────────────────────────────────── */
+.popover {
+  position: absolute;
+  bottom: 60px;
+  background: var(--glass-popover);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  box-shadow: 0 -15px 50px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.08);
+  padding: 20px;
+  width: 260px;
+  display: none;
+  z-index: 100;
+}
+.popover.visible { display: block; animation: popIn 0.18s ease-out; }
+@keyframes popIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+.popover::before {
+  content: ''; position: absolute; bottom: -6px;
+  left: var(--arrow-left, 24px);
+  width: 14px; height: 14px;
+  background: var(--glass-popover);
+  transform: rotate(45deg);
+  border-right: 1px solid var(--glass-border);
+  border-bottom: 1px solid var(--glass-border);
+  backdrop-filter: blur(30px);
 }
 
-.editui-panel {
-  display: flex;
-  flex-direction: column;
-  background: #1a1a1f;
-  border: 1px solid #2e2e35;
-  border-radius: 12px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
-  width: 90%;
-  max-width: 560px;
-  max-height: 80vh;
-  overflow: hidden;
-  color: #d4d4d8;
-  font-size: 13px;
+.pop-title {
+  font-size: 11px; color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: 0.5px;
+  margin-bottom: 16px; font-weight: 600;
 }
 
-.editui-panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  border-bottom: 1px solid #2e2e35;
-  font-weight: 600;
-  font-size: 13px;
+/* ── Form elements ──────────────────────────────────────────────────── */
+.input-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+.input-row { display: flex; align-items: center; gap: 8px; }
+.lbl { font-size: 12px; color: var(--text-secondary); width: 58px; flex-shrink: 0; }
+
+input[type="text"],
+input[type="number"],
+select {
+  background: var(--glass-input); border: 1px solid var(--glass-border);
+  color: var(--text-primary); padding: 7px 10px; border-radius: 8px;
+  width: 100%; font-size: 13px; font-family: inherit;
+  outline: none; transition: border-color 0.15s, background 0.15s;
+}
+input[type="text"]:focus,
+input[type="number"]:focus,
+select:focus { border-color: var(--accent); background: rgba(108,92,231,0.1); }
+
+input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
+input[type="number"] { -moz-appearance: textfield; }
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+/* ── Color swatch ───────────────────────────────────────────────────── */
+.color-swatch-wrap { position: relative; width: 28px; height: 28px; min-width: 28px; flex-shrink: 0; }
+.color-swatch { width: 100%; height: 100%; border-radius: 8px; border: 1px solid var(--glass-border); cursor: pointer; }
+.color-swatch-wrap input[type="color"] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer;
+  width: 100%; height: 100%; border: none; padding: 0;
 }
 
-.editui-panel-header button {
-  background: none;
-  border: none;
-  color: #777;
-  font-size: 16px;
-  cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 4px;
+/* ── Buttons (in popovers) ──────────────────────────────────────────── */
+.btn {
+  background: var(--glass-input); border: 1px solid var(--glass-border);
+  color: var(--text-primary); padding: 8px 14px; border-radius: 10px;
+  cursor: pointer; font-size: 12px; font-family: inherit;
+  text-align: center; transition: background 0.15s;
 }
-.editui-panel-header button:hover { background: #2e2e35; color: #fff; }
+.btn:hover { background: var(--glass-hover); }
+.btn-accent { background: var(--accent-grad); border: none; box-shadow: 0 4px 12px rgba(108,92,231,0.3); }
+.btn-full { width: 100%; }
 
-.editui-panel-body {
-  padding: 16px;
-  overflow-y: auto;
-  flex: 1;
+/* ── Style toggles (B I U S) ────────────────────────────────────────── */
+.style-toggles { display: flex; gap: 6px; margin-bottom: 16px; }
+.toggle-btn {
+  width: 36px; height: 36px; background: var(--glass-input);
+  border: 1px solid var(--glass-border); color: #fff;
+  border-radius: 10px; cursor: pointer; font-size: 14px; font-family: inherit;
+  transition: background 0.15s;
+}
+.toggle-btn.selected { background: var(--accent); border-color: var(--accent); box-shadow: 0 2px 8px rgba(108,92,231,0.4); }
+
+/* ── Toggle switch (JSON / MD) ──────────────────────────────────────── */
+.toggle-switch {
+  display: inline-flex; background: var(--glass-input); border-radius: 12px;
+  padding: 3px; margin-bottom: 16px; border: 1px solid var(--glass-border);
+}
+.toggle-switch button {
+  background: transparent; border: none; color: var(--text-secondary);
+  padding: 6px 14px; border-radius: 9px; cursor: pointer;
+  font-size: 12px; font-weight: 500; font-family: inherit; transition: background 0.15s;
+}
+.toggle-switch button.active { background: var(--accent-grad); color: #fff; box-shadow: 0 2px 8px rgba(108,92,231,0.4); }
+
+/* ── Code block ─────────────────────────────────────────────────────── */
+.code-block {
+  background: rgba(0,0,0,0.45); padding: 12px; border-radius: 12px;
+  font-family: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+  font-size: 11px; color: #2ecc71; white-space: pre-wrap;
+  height: 160px; overflow-y: auto; border: 1px solid var(--glass-border);
+  margin-bottom: 16px;
 }
 
-.editui-panel-body pre {
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  font-size: 12px;
-  line-height: 1.6;
-  color: #aaa;
-  white-space: pre-wrap;
-  word-break: break-word;
-  margin: 0;
+/* ── Box model (spacing) ────────────────────────────────────────────── */
+.box-model {
+  background: rgba(231,76,60,0.18); border: 1px solid rgba(231,76,60,0.4);
+  padding: 22px; border-radius: 8px; position: relative;
+  text-align: center; color: #fff; font-size: 10px;
 }
+.box-padding {
+  background: rgba(241,196,15,0.18); border: 1px solid rgba(241,196,15,0.4);
+  padding: 22px; border-radius: 6px; position: relative;
+}
+.box-element {
+  background: rgba(46,204,113,0.18); border: 1px solid rgba(46,204,113,0.4);
+  height: 32px; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 10px; font-weight: bold;
+}
+.box-label {
+  position: absolute; font-size: 10px; font-weight: bold;
+  cursor: pointer; color: #fff; opacity: 0.85;
+}
+.box-label:hover { opacity: 1; text-decoration: underline dotted; }
+.box-label input {
+  width: 44px; font-size: 10px; font-weight: bold; font-family: inherit;
+  background: rgba(0,0,0,0.55); border: 1px solid var(--accent);
+  color: #fff; border-radius: 4px; padding: 1px 3px;
+  text-align: center; outline: none;
+}
+.val-top   { top: 5px;    left: 50%; transform: translateX(-50%); }
+.val-bot   { bottom: 5px; left: 50%; transform: translateX(-50%); }
+.val-left  { left: 5px;   top: 50%;  transform: translateY(-50%); }
+.val-right { right: 5px;  top: 50%;  transform: translateY(-50%); }
 
-.editui-panel-footer {
-  display: flex;
-  gap: 8px;
-  padding: 12px 16px;
-  border-top: 1px solid #2e2e35;
-  justify-content: flex-end;
+/* ── Advanced radius ────────────────────────────────────────────────── */
+.radius-advanced {
+  display: none; flex-direction: column; gap: 8px;
+  padding: 12px; background: var(--glass-input);
+  border-radius: 10px; border: 1px solid var(--glass-border);
 }
+.radius-advanced.visible { display: flex; }
+.advanced-toggle { font-size: 11px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.advanced-toggle input[type="checkbox"] { width: auto; cursor: pointer; }
 
-.editui-sec-btn {
-  padding: 5px 14px;
-  border-radius: 6px;
-  border: 1px solid #2e2e35;
-  background: transparent;
-  color: #777;
-  font-size: 11px;
-  cursor: pointer;
+/* ── Note textarea ──────────────────────────────────────────────────── */
+.note-textarea {
+  width: 100%; height: 110px;
+  background: var(--glass-input); border: 1px solid var(--glass-border);
+  color: var(--text-primary); border-radius: 10px;
+  padding: 10px; font-size: 13px; font-family: inherit;
+  resize: vertical; outline: none; line-height: 1.5;
+  transition: border-color 0.15s;
 }
-.editui-sec-btn:hover { background: #26262e; color: #fff; }
+.note-textarea:focus { border-color: var(--accent); }
+
+/* ── Prompt popover ─────────────────────────────────────────────────── */
+#popover-prompt { width: 360px; }
+
+/* ── Scrollbar ──────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--glass-hover); border-radius: 3px; }
