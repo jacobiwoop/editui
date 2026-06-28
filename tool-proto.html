@@ -370,6 +370,24 @@
     </div>
   </div>
 
+  <!-- NOTE -->
+  <button class="tbtn" onclick="event.stopPropagation(); togglePanel('popover-note', this)" title="Note">
+    <svg viewBox="0 0 24 24"><path d="M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H9l-6-6V5zm2 0v12.17L9.83 21H19V5H5zm3 4h8v2H8V9zm0 4h5v2H8v-2z"/></svg>
+  </button>
+  <div id="popover-note" class="popover" style="width:300px">
+    <div class="pop-title">Note</div>
+    <textarea id="note-input" placeholder="Écrivez votre note ici…"
+      style="width:100%; height:140px; background:var(--glass-input); border:1px solid var(--glass-border);
+             color:var(--text-primary); border-radius:10px; padding:10px; font-size:13px;
+             font-family:inherit; resize:vertical; outline:none; line-height:1.5;"
+      oninput="this.style.borderColor=this.value?'var(--accent-color)':'var(--glass-border)'"
+    ></textarea>
+    <div style="display:flex; gap:8px; margin-top:12px;">
+      <button class="btn btn-accent" style="flex:1" onclick="copyNote()">Copier</button>
+      <button class="btn" onclick="document.getElementById('note-input').value=''; this.closest('.popover').querySelector('textarea').style.borderColor='var(--glass-border)'">Effacer</button>
+    </div>
+  </div>
+
   <div class="separator"></div>
 
   <!-- UNDO -->
@@ -601,6 +619,13 @@
     btn.classList.add('active');
     renderPrompt();
   }
+  function copyNote() {
+    const text = document.getElementById('note-input').value.trim()
+    if (!text) return
+    navigator.clipboard?.writeText(text).catch(() => {})
+    flashHint(document.querySelector('#popover-note .btn-accent'), 'Copié ✓')
+  }
+
   function copyPrompt() {
     // Pas d'API clipboard en file:// → feedback visuel simple (prototype).
     flashHint(document.getElementById('btn-copy-prompt'), 'Copié ✓');
