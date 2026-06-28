@@ -18,8 +18,8 @@ function injectPickerStyles() {
   const s = document.createElement('style')
   s.id = 'editui-picker-style'
   s.textContent = `
-    .editui-hover    { outline: 2px solid #6c5ce7 !important; outline-offset: 2px !important; cursor: crosshair !important; }
-    .editui-selected { outline: 3px solid #a29bfe !important; outline-offset: 2px !important; }
+    .editui-hover    { box-shadow: inset 0 0 0 2px #6c5ce7 !important; cursor: crosshair !important; }
+    .editui-selected { box-shadow: inset 0 0 0 3px #a29bfe !important; }
   `
   document.head.appendChild(s)
 }
@@ -486,7 +486,7 @@ function setupToolbarJS(shadow) {
   shadow.getElementById('btn-copy-prompt')?.addEventListener('click', () => {
     const text = shadow.getElementById('prompt-content')?.textContent
     if (!text) return
-    navigator.clipboard.writeText(text).catch(() => {})
+    copyToClipboard(text)
     flashBtn(shadow.getElementById('btn-copy-prompt'), 'Copié ✓', 'Copier le Prompt')
   })
 }
@@ -898,6 +898,24 @@ function detectFramework() {
   if (Object.keys(root).some(k => k.startsWith('__reactFiber') || k.startsWith('_reactRootContainer'))) return 'React'
   if (document.body.__vue_app__ || document.querySelector('[data-v-app]')) return 'Vue'
   return 'Unknown'
+}
+
+function copyToClipboard(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).catch(() => fallbackCopy(text))
+  } else {
+    fallbackCopy(text)
+  }
+}
+
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea')
+  ta.value = text
+  ta.style.cssText = 'position:fixed;top:-9999px;opacity:0;pointer-events:none'
+  document.body.appendChild(ta)
+  ta.select()
+  document.execCommand('copy')
+  ta.remove()
 }
 
 function flashBtn(btn, msg, original) {
