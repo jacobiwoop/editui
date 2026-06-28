@@ -63,33 +63,37 @@ Works without the plugin too — falls back to CSS selector + tag + classes.
 
 ## Installation
 
-### 1. Build plugin (Vite + React)
+### Step 1 — Clone & setup
 
 ```bash
-cd plugin/js
-npm install
+git clone https://github.com/jacobiwoop/editui.git
+cd editui
+chmod +x install.sh && ./install.sh
 ```
 
-In your project:
+The script installs dependencies and prints the next steps with the exact paths for your machine.
+
+---
+
+### Step 2 — Add the plugin to your React project
 
 ```bash
-npm install ../editui/plugin/js   # or publish to npm and install normally
+npm install /path/to/editui/plugin/js
 ```
 
-**`vite.config.js`**
+Then replace `react()` in your Vite config:
 
 ```js
+// vite.config.js
 import { defineConfig } from 'vite'
-import editui from 'editui/vite'   // replaces @vitejs/plugin-react
+import editui from 'editui/vite'
 
 export default defineConfig({
-  plugins: [editui()],
+  plugins: [editui()],   // wraps @vitejs/plugin-react — no separate import needed
 })
 ```
 
-That's it — no separate `react()` call needed. EditUI wraps it internally.
-
-Every JSX element in your app gets annotated automatically:
+Every native JSX element gets annotated automatically at dev time:
 
 ```html
 <button data-editui-file="src/components/Hero.tsx"
@@ -99,31 +103,28 @@ Every JSX element in your app gets annotated automatically:
 </button>
 ```
 
-Annotations are stripped automatically when `NODE_ENV=production`.
+Stripped automatically in production (`NODE_ENV=production`).
 
 ---
 
-### 2. Chrome extension
+### Step 3 — Load the Chrome extension
 
-1. Clone or download this repo
-2. Open Chrome → `chrome://extensions`
-3. Enable **Developer mode** (top right)
-4. Click **Load unpacked**
-5. Select the `extension/` folder
+```
+chrome://extensions  →  Developer mode ON  →  Load unpacked  →  editui/extension/
+```
 
-The EditUI icon appears in your toolbar. Click it to toggle the picker on any page.
+The EditUI icon appears in your Chrome toolbar. Click it to toggle the picker on any page.
 
 ---
 
-## Quick start (example app)
+### Step 4 — Try it with the example app
 
 ```bash
 cd example
-npm install
 npm run dev
 ```
 
-Open `http://localhost:5173`, then activate the extension — every element has source annotations visible in DevTools under `data-editui-*`.
+Open `http://localhost:5173`, activate the extension, click any element.
 
 ---
 
