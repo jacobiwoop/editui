@@ -177,7 +177,13 @@
     height: 40px; border-radius: 4px; display: flex; align-items: center;
     justify-content: center; color: #fff; font-weight: bold;
   }
-  .box-label { position: absolute; font-size: 10px; opacity: 0.85; font-weight: bold; }
+  .box-label { position: absolute; font-size: 10px; opacity: 0.85; font-weight: bold; cursor: pointer; }
+  .box-label:hover { opacity: 1; text-decoration: underline dotted; }
+  .box-label input {
+    width: 44px; font-size: 10px; font-weight: bold; font-family: inherit;
+    background: rgba(0,0,0,0.5); border: 1px solid var(--accent-color);
+    color: #fff; border-radius: 4px; padding: 1px 3px; text-align: center; outline: none;
+  }
   .val-top   { top: 6px; left: 50%; transform: translateX(-50%); }
   .val-bot   { bottom: 6px; left: 50%; transform: translateX(-50%); }
   .val-left  { left: 6px; top: 50%; transform: translateY(-50%); }
@@ -337,20 +343,19 @@
   </button>
   <div id="popover-spacing" class="popover">
     <div class="pop-title">Box Model</div>
-    <div class="box-model" onclick="alert('Éditer Margin')">
-      <span class="box-label val-top">10px</span>
-      <span class="box-label val-bot">10px</span>
-      <span class="box-label val-left">10px</span>
-      <span class="box-label val-right">10px</span>
-      <div class="box-padding" onclick="event.stopPropagation(); alert('Éditer Padding')">
-        <span class="box-label val-top">10px</span>
-        <span class="box-label val-bot">10px</span>
-        <span class="box-label val-left">24px</span>
-        <span class="box-label val-right">24px</span>
+    <div class="box-model">
+      <span class="box-label val-top"  data-prop="marginTop"    onclick="editSpacing(this)">10px</span>
+      <span class="box-label val-bot"  data-prop="marginBottom" onclick="editSpacing(this)">10px</span>
+      <span class="box-label val-left" data-prop="marginLeft"   onclick="editSpacing(this)">10px</span>
+      <span class="box-label val-right"data-prop="marginRight"  onclick="editSpacing(this)">10px</span>
+      <div class="box-padding">
+        <span class="box-label val-top"  data-prop="paddingTop"    onclick="editSpacing(this)">10px</span>
+        <span class="box-label val-bot"  data-prop="paddingBottom" onclick="editSpacing(this)">10px</span>
+        <span class="box-label val-left" data-prop="paddingLeft"   onclick="editSpacing(this)">24px</span>
+        <span class="box-label val-right"data-prop="paddingRight"  onclick="editSpacing(this)">24px</span>
         <div class="box-element">Élément</div>
       </div>
     </div>
-    <p style="font-size:10px; color:var(--text-secondary); margin-top:12px; text-align:center;">Cliquez sur une zone pour l'éditer</p>
   </div>
 
   <!-- SIZE -->
@@ -528,6 +533,33 @@
     target.style.borderRadius = '8px';
     target.style.padding = '10px 24px';
     flashHint(null, 'Réinitialisé');
+  }
+
+  function editSpacing(span) {
+    if (span.querySelector('input')) return // déjà en édition
+    const current = span.textContent.trim()
+    const prop = span.dataset.prop
+
+    const input = document.createElement('input')
+    input.type = 'text'
+    input.value = current
+    span.textContent = ''
+    span.appendChild(input)
+    input.focus()
+    input.select()
+
+    function commit() {
+      const val = input.value.trim() || current
+      span.textContent = val
+      target.style[prop] = val
+    }
+    input.addEventListener('blur', commit)
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { input.blur() }
+      if (e.key === 'Escape') { span.textContent = current }
+      e.stopPropagation()
+    })
+    input.addEventListener('click', e => e.stopPropagation())
   }
 
   function syncSwatch(id, color) {
