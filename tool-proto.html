@@ -306,24 +306,11 @@
           <span class="lbl">Line</span><input type="number" value="24" oninput="applyText()">
         </div>
       </div>
-      <button class="btn btn-full" onclick="switchTextScreen(2)">🎨 Changer la couleur</button>
-    </div>
-
-    <div id="text-screen-2" class="screen">
-      <button class="popover-back" onclick="switchTextScreen(1)">← Retour</button>
-      <div class="pop-title" style="text-align:center; margin-bottom:20px;">Couleur du texte</div>
-      <div class="input-group">
-        <div class="input-row">
-          <span class="lbl">Hex</span>
-          <input type="text" id="tx-color" value="#ffffff" oninput="syncSwatch('tx-swatch', this.value); applyText()">
-          <input type="color" id="tx-color-picker" value="#ffffff" style="display:none" oninput="syncColorInput('tx-color', 'tx-swatch', this.value); applyText();">
-          <div class="color-swatch" id="tx-swatch" style="background:#ffffff" onclick="document.getElementById('tx-color-picker').click()"></div>
-        </div>
-        <div style="height:120px; background: linear-gradient(to right, red, yellow, green, cyan, blue, magenta, red); border-radius:10px; margin-bottom:10px; border: 1px solid var(--glass-border);"></div>
-      </div>
-      <div style="display:flex; gap:10px;">
-        <button class="btn" style="flex:1; background:rgba(231,76,60,0.2); border:1px solid rgba(231,76,60,0.4); color:#fff;" onclick="closeAllPopovers()">Annuler</button>
-        <button class="btn btn-accent" style="flex:1;" onclick="switchTextScreen(1)">Appliquer</button>
+      <div class="input-row">
+        <span class="lbl">Couleur</span>
+        <input type="text" id="tx-color" value="#ffffff" oninput="syncSwatch('tx-swatch', this.value); applyText()">
+        <input type="color" id="tx-color-picker" value="#ffffff" style="display:none" oninput="syncColorInput('tx-color', 'tx-swatch', this.value); applyText();">
+        <div class="color-swatch" id="tx-swatch" style="background:#ffffff" onclick="document.getElementById('tx-color-picker').click()"></div>
       </div>
     </div>
   </div>
@@ -414,7 +401,6 @@
     if (!wasVisible) {
       popover.classList.add('visible');
       if (btn) btn.classList.add('active');
-      if (id === 'popover-text') switchTextScreen(1);
       if (id === 'popover-prompt') renderPrompt();
       positionPopover(popover, btn);
     }
@@ -451,11 +437,6 @@
     if (!e.target.closest('.toolbar')) closeAllPopovers();
   });
 
-  // --- Text screens ---
-  function switchTextScreen(n) {
-    document.querySelectorAll('#popover-text .screen').forEach(s => s.classList.remove('active'));
-    document.getElementById('text-screen-' + n).classList.add('active');
-  }
 
   // --- Advanced radius ---
   function toggleAdvancedRadius() {
