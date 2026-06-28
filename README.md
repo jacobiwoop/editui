@@ -1,6 +1,6 @@
 # EditUI
 
-Visual UI picker with floating toolbar. Click any element, get a structured prompt ready to paste into any AI.
+Visual UI picker with glassmorphism toolbar. Click any element, modify it visually, get a structured prompt ready to paste into any AI.
 
 ---
 
@@ -9,47 +9,109 @@ Visual UI picker with floating toolbar. Click any element, get a structured prom
 **Two parts:**
 
 1. **`plugin/`** — annotates every DOM element at build time with source context (`file`, `line`, `component`). Zero runtime cost.
-2. **`extension/`** — Chrome/Firefox extension. Picks elements, shows a floating toolbar, generates a structured prompt.
+2. **`extension/`** — Chrome extension. Click elements, modify CSS visually via floating toolbar, copy a structured prompt.
 
 The prompt contains enough context for any AI to locate and modify the right component in your codebase.
 
 ---
 
-## The generated prompt
+## The toolbar
 
-```
-[EditUI Context]
+A glassmorphism pill-shaped toolbar anchored at the bottom of the screen. Click any element on the page to select it, then use the toolbar buttons to modify it visually in real time.
 
-Page: http://localhost:5173/checkout
-Framework: React
+| Button | What it does |
+|--------|--------------|
+| Background | Color picker + opacity slider |
+| Border | Width, style, radius (per-corner), color |
+| Text | Font, bold/italic/underline/strikethrough, size, line-height, color |
+| Spacing | Interactive box model — click any margin or padding value to edit it inline |
+| Size | Width and height |
+| Note | Free-text note attached to the selection |
+| Undo | Restore original styles |
+| Clear | Remove all inline overrides |
+| Prompt | Generate a JSON or Markdown prompt with all changes — copy with one click |
 
-Component: CheckoutButton
-File: src/components/CheckoutButton.tsx
-Line: 23
-
-Element: <button>
-Classes: btn btn-primary checkout-btn
-Selector: main > section.checkout > button.btn-primary
-
-Requested changes:
-- Border radius: 8px → 24px
-- Background color: #3B82F6 → #22C55E
-- Free instruction: "Add a drop shadow"
-```
-
-Works without the plugin too — falls back to CSS selector + classes + inner text.
+The logo icon on the left collapses the toolbar to a small pill you can drag anywhere on screen.
 
 ---
 
-## Repository structure
+## The generated prompt
 
+```json
+{
+  "page": "http://localhost:5173/checkout",
+  "framework": "React",
+  "component": "CheckoutButton",
+  "file": "src/components/CheckoutButton.tsx",
+  "line": "23",
+  "element": {
+    "tag": "button",
+    "classes": "btn btn-primary",
+    "selector": "main > section > button.btn-primary",
+    "text": "Passer la commande"
+  },
+  "changes": [
+    { "prop": "borderRadius", "from": "8px", "to": "24px" },
+    { "prop": "backgroundColor", "from": "rgb(59,130,246)", "to": "#22c55e" }
+  ]
+}
 ```
-editui/
-├── plugin/
-│   └── js/          — Babel plugin + unplugin wrapper (Vite, Webpack, Rollup, esbuild)
-├── extension/       — Browser extension (coming)
-└── example/         — Vite + React demo app
+
+Works without the plugin too — falls back to CSS selector + tag + classes.
+
+---
+
+## Installation
+
+### 1. Build plugin (Vite + React)
+
+```bash
+cd plugin/js
+npm install
 ```
+
+In your project:
+
+```bash
+npm install ../editui/plugin/js   # or publish to npm and install normally
+```
+
+**`vite.config.js`**
+
+```js
+import { defineConfig } from 'vite'
+import editui from 'editui/vite'   // replaces @vitejs/plugin-react
+
+export default defineConfig({
+  plugins: [editui()],
+})
+```
+
+That's it — no separate `react()` call needed. EditUI wraps it internally.
+
+Every JSX element in your app gets annotated automatically:
+
+```html
+<button data-editui-file="src/components/Hero.tsx"
+        data-editui-line="42"
+        data-editui-component="Hero">
+  Get started
+</button>
+```
+
+Annotations are stripped automatically when `NODE_ENV=production`.
+
+---
+
+### 2. Chrome extension
+
+1. Clone or download this repo
+2. Open Chrome → `chrome://extensions`
+3. Enable **Developer mode** (top right)
+4. Click **Load unpacked**
+5. Select the `extension/` folder
+
+The EditUI icon appears in your toolbar. Click it to toggle the picker on any page.
 
 ---
 
@@ -61,7 +123,29 @@ npm install
 npm run dev
 ```
 
-Open DevTools → inspect any element → you'll see `data-editui-file`, `data-editui-line`, `data-editui-component`.
+Open `http://localhost:5173`, then activate the extension — every element has source annotations visible in DevTools under `data-editui-*`.
+
+---
+
+## Repository structure
+
+```
+editui/
+├── plugin/
+│   └── js/          — Babel plugin + unplugin wrapper (Vite, Webpack, Rollup, esbuild)
+│       ├── src/
+│       │   ├── babel-plugin.js   — AST transform (JSXOpeningElement visitor)
+│       │   ├── vite.mjs          — Vite integration (wraps @vitejs/plugin-react)
+│       │   ├── webpack.js        — Webpack integration
+│       │   └── rollup.js         — Rollup integration
+│       └── package.json
+├── extension/       — Chrome extension (Manifest V3)
+│   ├── content.js   — Picker + toolbar logic (shadow DOM)
+│   ├── toolbar.css  — Glassmorphism styles (shadow DOM scoped)
+│   ├── popup.html   — Extension popup
+│   └── manifest.json
+└── example/         — Vite + React demo app
+```
 
 ---
 
@@ -72,10 +156,11 @@ Open DevTools → inspect any element → you'll see `data-editui-file`, `data-e
 | ✅ | Babel plugin — JSX AST transform |
 | ✅ | unplugin wrapper (Vite / Webpack / Rollup / esbuild) |
 | ✅ | Example app |
-| 🔲 | Browser extension — picker + toolbar |
+| ✅ | Chrome extension — glassmorphism toolbar with 7 edit panels |
+| 🔲 | Publish plugin to npm |
+| 🔲 | Firefox extension |
 | 🔲 | SWC plugin (v2) |
-| 🔲 | Laravel Blade support (v2) |
-| 🔲 | Django / Flask support (v2) |
+| 🔲 | Vue / Svelte support (v2) |
 
 ---
 
@@ -83,5 +168,5 @@ Open DevTools → inspect any element → you'll see `data-editui-file`, `data-e
 
 - No direct AI API calls — no API key required
 - Not tied to a specific AI — works with Claude, GPT, Gemini, Cursor, anything
-- Not a visual editor — it provides context, the AI does the work
-- Not intrusive in production — stripped automatically via `NODE_ENV`
+- Not a visual editor — it gives context, the AI does the actual code changes
+- Not intrusive in production — annotations stripped automatically via `NODE_ENV`
