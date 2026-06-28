@@ -111,18 +111,13 @@
   /* Queue (flèche) qui pointe vers le bas, sous le popover */
   .popover::before {
     content: ''; position: absolute; bottom: -6px;
+    left: var(--arrow-left, 24px);
     width: 14px; height: 14px; background: var(--glass-popover);
     transform: rotate(45deg);
     border-right: 1px solid var(--glass-border);
     border-bottom: 1px solid var(--glass-border);
     backdrop-filter: blur(30px);
   }
-  #popover-bg::before      { left: 24px; }
-  #popover-border::before  { left: 70px; }
-  #popover-text::before    { left: 110px; }
-  #popover-spacing::before { left: 150px; }
-  #popover-size::before    { left: 190px; }
-  #popover-prompt::before  { right: 24px; }
 
   .pop-title {
     font-size: 11px; color: var(--text-secondary);
@@ -410,16 +405,41 @@
 
   // --- Popovers ---
   function togglePanel(id, btn) {
-    const t = document.getElementById(id);
-    const wasVisible = t.classList.contains('visible');
+    const popover = document.getElementById(id);
+    const wasVisible = popover.classList.contains('visible');
     closeAllPopovers();
     if (!wasVisible) {
-      t.classList.add('visible');
-      if (btn) btn.classList.add('active');   // maintient l'effet "enfoncé"
+      popover.classList.add('visible');
+      if (btn) btn.classList.add('active');
       if (id === 'popover-text') switchTextScreen(1);
       if (id === 'popover-prompt') renderPrompt();
+      positionPopover(popover, btn);
     }
   }
+
+  function positionPopover(popover, btn) {
+    if (!btn) return;
+    const toolbar = document.querySelector('.toolbar');
+    const toolbarRect = toolbar.getBoundingClientRect();
+    const btnRect = btn.getBoundingClientRect();
+
+    // Centre du bouton relatif à la toolbar
+    const btnCenter = btnRect.left - toolbarRect.left + btnRect.width / 2;
+
+    // Largeur du popover (visible pour mesurer)
+    const popWidth = popover.offsetWidth;
+    const toolbarWidth = toolbarRect.width;
+
+    // Centrer le popover sur le bouton, clamper dans la toolbar
+    let popLeft = btnCenter - popWidth / 2;
+    popLeft = Math.max(0, Math.min(popLeft, toolbarWidth - popWidth));
+    popover.style.left = popLeft + 'px';
+
+    // Flèche : pointe vers le centre du bouton
+    const arrowLeft = btnCenter - popLeft - 7; // 7 = moitié de la flèche (14px)
+    popover.style.setProperty('--arrow-left', arrowLeft + 'px');
+  }
+
   function closeAllPopovers() {
     document.querySelectorAll('.popover').forEach(p => p.classList.remove('visible'));
     document.querySelectorAll('.tbtn.active').forEach(b => b.classList.remove('active'));
